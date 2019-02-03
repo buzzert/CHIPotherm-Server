@@ -5,6 +5,9 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
+
+	"github.com/gorilla/mux"
 )
 
 type commandControlServer struct {
@@ -17,9 +20,14 @@ type commandControlServer struct {
 // the string representation of the new state (i.e., "enabled 80")
 func (s *commandControlServer) poll(w http.ResponseWriter, r *http.Request) {
 	log.Print("Waiting for command...")
-	command := <-s.commands
-
-	fmt.Fprintf(w, "%s", command)
+	context := r.Context()
+	select {
+	case command := <-s.commands:
+		fmt.Fprintf(w, "%s", command)
+		break
+	case <-context.Done():
+		log.Print("Connection closed unexpectedly")
+	}
 }
 
 // Returns the cached state on the server
@@ -71,13 +79,18 @@ func main() {
 	commandChannel := make(chan string)
 
 	server := commandControlServer{commands: commandChannel}
-	http.HandleFunc("/poll", server.poll)
-	http.HandleFunc("/updateState", server.updateState)
-	http.HandleFunc("/refreshState", server.refreshState)
 
-	http.HandleFunc("/getCachedState", server.getCachedState)
-	http.HandleFunc("/setState", server.setState)
+	router := mux.NewRouter()
+	router.HandleFunc("/poll", server.poll)
+	router.HandleFunc("/updateState", server.updateState)
+	router.HandleFunc("/refreshState", server.refreshState)
 
-	log.Print("Listening on :43001")
+	router.HandleFunc("/getCachedState", server.getCachedState)
+	router.HandleFunc("/setState", server.setState)
+
+	listenAddress := ":43001"
+	log.Print("Listening on " + listenAddress)
+
+	http.Handle("/", http.TimeoutHandler(router, time.Duration(1*time.Hour), "replaceme"))
 	http.ListenAndServe(":43001", nil)
 }
