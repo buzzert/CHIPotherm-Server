@@ -8,18 +8,21 @@ import (
 // ThermostatState represents the state handed down from the command and control
 // server to the client (the thermostat itself)
 type ThermostatState struct {
-	enabled     bool
-	temperature float32
+	Enabled            bool    `json:"Enabled,string"`
+	HeatOn             bool    `json:"HeatOn,string"`
+	TargetTemperature  float64 `json:"TargetTemperature,string"`
+	CurrentTemperature float64 `json:"CurrentTemperature,string"`
 }
 
 // StateFromString returns a ThermostatState based on a string with the following format:
 // [enabled | disabled] [temperature f]
 func StateFromString(str string) ThermostatState {
-	var temperature float32
+	log.Printf("STR: %s", str)
+	var temperature float64
 	var enabledString string
 	_, err := fmt.Sscanf(str, "%s %f", &enabledString, &temperature)
 	if err != nil {
-		log.Printf("Error parsing state")
+		log.Printf("Error parsing state: %s", err)
 	}
 
 	enabled := false
@@ -28,16 +31,16 @@ func StateFromString(str string) ThermostatState {
 	}
 
 	return ThermostatState{
-		enabled:     enabled,
-		temperature: temperature,
+		Enabled:           enabled,
+		TargetTemperature: temperature,
 	}
 }
 
 func (state ThermostatState) String() string {
 	stateString := "enabled"
-	if !state.enabled {
+	if !state.Enabled {
 		stateString = "disabled"
 	}
 
-	return fmt.Sprintf("%s %f", stateString, state.temperature)
+	return fmt.Sprintf("%s %f", stateString, state.TargetTemperature)
 }

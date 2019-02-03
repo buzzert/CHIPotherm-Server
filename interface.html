@@ -1,0 +1,260 @@
+<html>
+    <style type="text/css">
+    html, body {
+        background: black;
+    }
+
+    #status {
+        color: white;
+        font-family: monospace;
+        font-size: 18px;
+        margin-top: 25px;
+        margin-bottom: 25px;
+        margin-left: 20px;
+    }
+
+    #container {
+        width: 400px;
+        font-family: sans-serif;
+        display: flex;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+
+    .rounded-box {
+        border-radius: 6px;
+        text-align: center;
+        font-size: 32px;
+        font-family: monospace;
+
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    @keyframes box_pulse {
+        0% {
+            background-color: red;
+            color: black;
+        }
+        100% {
+            background-color: black;
+            color: red;
+        }
+    }
+
+    .temp-box {
+        width: 100px;
+        height: 100px;
+    }
+
+    .pulse_animation {
+        animation-name: box_pulse;
+        animation-duration: 0.5s;
+        animation-delay: 0s;
+        animation-direction: alternate-reverse;
+        animation-iteration-count: infinite;
+    }
+
+    .temp_label {
+        color: #71a6fc;
+        margin-bottom: 5px;
+    }
+
+    #current_temp {
+        background-color: #71a6fcff;
+        margin-bottom: 10px;
+    }
+
+    #target_temp {
+        background-color: red;
+    }
+
+    #controls * {
+        text-decoration: none;
+    }
+
+    #enable_button {
+        width: 200px;
+        height: 130px;
+        border: 3px solid red;
+        color: red;
+    }
+
+    #enable_button:active {
+        background-color: red;
+        color: black;
+    }
+
+    #enable_button.enabled {
+        background-color: #440000;
+    }
+
+    #adjustments_container {
+        display: flex;
+        flex-direction: row;
+    }
+
+    #adjustments_container :first-child {
+        margin-right: 5px;
+    }
+
+    .adjustment_button {
+        height: 70px;
+        color: #71a6fc; 
+        border: 3px solid #71a6fc;
+        flex-grow: 1;
+    }
+
+    .adjustment_button:active {
+        background: #71a6fc;
+        color: black;
+    }
+
+    </style>
+
+    <script type="text/javascript">
+    let ENABLE_BUTTON = "enable_button";
+    let INC_BUTTON = "increase_temp";
+    let DEC_BUTTON = "decrease_temp";
+    let CURRENT_TEMP = "current_temp";
+    let TARGET_TEMP = "target_temp";
+    function elem(id) { return document.getElementById(id); }
+
+    var is_enabled = false;
+    var target_temperature = 0.0;
+    var current_temperature = 0.0;
+    var heat_on = false;
+
+    function applyStatusString(status_str) {
+        let parts = status_str.split(' ');
+        
+    }
+
+    function refreshState() {
+        let request = new XMLHttpRequest();
+        request.open("GET", "http://localhost:43001/refreshState");
+        request.onload = () => {
+            if (request.status == 200) {
+                let state = JSON.parse(request.responseText);
+                is_enabled = (state["Enabled"] == "true");
+                heat_on = (state["HeatOn"] == "true");
+                target_temperature = Math.round(parseFloat(state["TargetTemperature"]))
+                current_temperature = Math.round(parseFloat(state["CurrentTemperature"]))
+
+                updateUI();
+            } else {
+                console.log("Error getting response");
+                setStatus("Error connecting to server");
+            }
+        }
+        
+        request.send();
+    }
+
+    function updateUI() {
+        // Enable button
+        let enable_button = elem(ENABLE_BUTTON);
+        if (is_enabled) {
+            enable_button.classList.add("enabled");
+        } else {
+            enable_button.classList.remove("enabled");
+        }
+        enable_button.innerHTML = (is_enabled ? "DISABLE" : "ENABLE");
+
+        // Target temp
+        let target_temp = elem(TARGET_TEMP);
+        target_temp.style.opacity = (is_enabled ? 1.0 : 0.5);
+        target_temp.innerHTML = target_temperature;
+
+        let PULSE_CLASS = "pulse_animation";
+        if (heat_on) {
+            elem(TARGET_TEMP).classList.add(PULSE_CLASS);
+        } else {
+            elem(TARGET_TEMP).classList.remove(PULSE_CLASS);
+        }
+
+        // Current temp
+        elem(CURRENT_TEMP).innerHTML = current_temperature;
+    }
+
+    function setEnabled(enabled) {
+        is_enabled = enabled;
+
+        let request = new XMLHttpRequest();
+        request.open("POST", "http://localhost:43001/setState");
+
+        let body = (enabled ? "enabled" : "disabled") + " " + target_temperature.toString();
+        console.log("Sending: " + body);
+        request.send(body);
+
+        updateUI();
+    }
+
+    function setStatus(status) {
+        var status_label = document.getElementById("status");
+        status_label.innerHTML = status;
+    }
+
+    function setHeatOn(on) {
+        heat_on = on;
+        updateUI();
+    }
+
+    function setTargetTemperature(target) {
+        target_temperature = target;
+        updateUI();
+    }
+
+    window.onload = () => {
+        setStatus("Idle");
+
+        elem(ENABLE_BUTTON).onclick = () => {
+            setEnabled(!is_enabled);
+        }
+
+        elem(DEC_BUTTON).onclick = () => {
+            setTargetTemperature(target_temperature - 1.0);
+        };
+
+        elem(INC_BUTTON).onclick = () => {
+            setTargetTemperature(target_temperature + 1.0);
+        }
+
+        refreshState();
+        setInterval(refreshState, 1000);
+    }
+    </script>
+<body>
+
+    <div id="status">
+    </div>
+    <div id="container">
+        <div id="statistics">
+            <div class="temp_container">
+                <div class="temp_label">Current</div>
+                <div id="current_temp" class="rounded-box temp-box">
+                    69
+                </div>
+            </div>
+
+            <div class="temp_container">
+                <div class="temp_label">Target</div>
+                <div id="target_temp" class="rounded-box temp-box">
+                    80
+                </div>
+            </div>
+        </div>
+        <div id="controls">
+            <div class="temp_label">&nbsp;</div>
+            <a href="#" id="enable_button" class="rounded-box"></a>
+            <div class="temp_label">&nbsp;</div>
+            <div id="adjustments_container">
+                <a href="#" id="decrease_temp" class="adjustment_button rounded-box">-</a>
+                <a href="#" id="increase_temp" class="adjustment_button rounded-box">+</a>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

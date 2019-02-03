@@ -12,11 +12,11 @@ Blocks until the state on the server changes, in which case responds with either
 ### updateState (state_format) -> ()
 Called by the CHIP: Updates the server's cached state.
 
-### refreshState () -> ()
-Called by the server: notifies the CHIP that the server requests an updateState.
+### refreshState () -> (state as json)
+Called by the server: notifies the CHIP that the server requests an updateState. Blocks until we hear back via `updateState`, then returns the new state.
 
-### getCachedState () -> state_format
-Immediately returns the server's cached state as state_format
+### getCachedState () -> (state as json)
+Immediately returns the server's cached state as JSON
 
 ### setState (state_format) -> ()
 Called by clients to the server: updates the server's cached state *and* notifies observers (via `poll`) about the new state.

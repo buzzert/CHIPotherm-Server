@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,8 +12,9 @@ import (
 )
 
 type commandControlServer struct {
-	commands chan string
-	state    ThermostatState
+	commands    chan string
+	stateChange chan bool
+	state       ThermostatState
 }
 
 // The CHIP responds to these messages
@@ -32,13 +34,23 @@ func (s *commandControlServer) poll(w http.ResponseWriter, r *http.Request) {
 
 // Returns the cached state on the server
 func (s *commandControlServer) getCachedState(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "%s", s.state.String())
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+
+	// Encode as JSON
+	b, err := json.Marshal(s.state)
+	if err == nil {
+		w.Write(b)
+	} else {
+		log.Printf("Error encoding as JSON: %s", err)
+	}
 }
 
 // Just sends the "state" command to the CHIP to ask it to send us a new state via
 // updateState()
 func (s *commandControlServer) refreshState(w http.ResponseWriter, r *http.Request) {
 	s.commands <- "refresh"
+	<-s.stateChange
+	s.getCachedState(w, r)
 }
 
 // Sets the server's cached state and notifies the CHIP
@@ -58,27 +70,42 @@ func (s *commandControlServer) setState(w http.ResponseWriter, r *http.Request) 
 			// TODO: Should this get queued instead?
 		}
 	} else {
-		log.Printf("Error parsing state string: %s")
+		log.Printf("Error parsing state string: %s", requestBody)
 	}
 }
 
 // From CHIP: Update the server's cached state
 func (s *commandControlServer) updateState(w http.ResponseWriter, r *http.Request) {
 	responseBytes, err := ioutil.ReadAll(r.Body)
-	responseBody := string(responseBytes)
 
 	if err == nil {
-		s.state = StateFromString(responseBody)
-		log.Printf("Got new state: %s", s.state.String())
+		// Response is JSON
+		err := json.Unmarshal(responseBytes, &s.state)
+		if err != nil {
+			log.Printf("Error parsing JSON: %s", err)
+		} else {
+			log.Printf("Got new state: %s", s.state.String())
+		}
 	} else {
-		log.Printf("Error parsing state string: %s")
+		log.Printf("Error parsing state string: %s", string(responseBytes))
+	}
+
+	// Notify state change
+	select {
+	case s.stateChange <- true:
+	default:
+		break
 	}
 }
 
 func main() {
 	commandChannel := make(chan string)
+	stateChangeChannel := make(chan bool)
 
-	server := commandControlServer{commands: commandChannel}
+	server := commandControlServer{
+		commands:    commandChannel,
+		stateChange: stateChangeChannel,
+	}
 
 	router := mux.NewRouter()
 	router.HandleFunc("/poll", server.poll)
