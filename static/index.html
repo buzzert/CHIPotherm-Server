@@ -128,7 +128,7 @@
 
     function refreshState() {
         let request = new XMLHttpRequest();
-        request.open("GET", "http://localhost:43001/refreshState");
+        request.open("GET", "/refreshState");
         request.onload = () => {
             if (request.status == 200) {
                 let state = JSON.parse(request.responseText);
@@ -183,7 +183,7 @@
         is_enabled = enabled;
 
         let request = new XMLHttpRequest();
-        request.open("POST", "http://localhost:43001/setState");
+        request.open("POST", "/setState");
 
         let body = (enabled ? "enabled" : "disabled") + " " + target_temperature.toString();
         console.log("Sending: " + body);
