@@ -126,11 +126,6 @@
     var current_temperature = 0.0;
     var heat_on = false;
 
-    function applyStatusString(status_str) {
-        let parts = status_str.split(' ');
-        
-    }
-
     function refreshState() {
         let request = new XMLHttpRequest();
         request.open("GET", "http://localhost:43001/refreshState");
@@ -142,12 +137,18 @@
                 target_temperature = Math.round(parseFloat(state["TargetTemperature"]))
                 current_temperature = Math.round(parseFloat(state["CurrentTemperature"]))
 
+                setStatus("Connected.");
                 updateUI();
             } else {
                 console.log("Error getting response");
                 setStatus("Error connecting to server");
             }
         }
+
+        request.onerror = (err) => {
+            console.log("err");
+            setStatus("Error connecting to CHIP: " + err);
+        };
         
         request.send();
     }
@@ -207,7 +208,7 @@
     }
 
     window.onload = () => {
-        setStatus("Idle");
+        setStatus("Connecting...");
 
         elem(ENABLE_BUTTON).onclick = () => {
             setEnabled(!is_enabled);
@@ -222,12 +223,15 @@
         }
 
         refreshState();
-        setInterval(refreshState, 1000);
+        setInterval(refreshState, 2500);
     }
     </script>
 <body>
 
     <div id="status">
+        <noscript>
+            This is an interactive web application and thus requires JavaScript to run. Sorry about that.
+        </noscript>
     </div>
     <div id="container">
         <div id="statistics">

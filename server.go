@@ -12,6 +12,7 @@ import (
 )
 
 type commandControlServer struct {
+	connected   bool
 	commands    chan string
 	stateChange chan bool
 	state       ThermostatState
@@ -21,14 +22,16 @@ type commandControlServer struct {
 // Will return either "refresh", in which the server expects a call to updateState, or
 // the string representation of the new state (i.e., "enabled 80")
 func (s *commandControlServer) poll(w http.ResponseWriter, r *http.Request) {
-	log.Print("Waiting for command...")
+	log.Print("CHIP Connected.")
+	s.connected = true
 	context := r.Context()
 	select {
 	case command := <-s.commands:
 		fmt.Fprintf(w, "%s", command)
 		break
 	case <-context.Done():
-		log.Print("Connection closed unexpectedly")
+		log.Print("CHIP disconnected")
+		s.connected = false
 	}
 }
 
@@ -48,9 +51,13 @@ func (s *commandControlServer) getCachedState(w http.ResponseWriter, r *http.Req
 // Just sends the "state" command to the CHIP to ask it to send us a new state via
 // updateState()
 func (s *commandControlServer) refreshState(w http.ResponseWriter, r *http.Request) {
-	s.commands <- "refresh"
-	<-s.stateChange
-	s.getCachedState(w, r)
+	if s.connected {
+		s.commands <- "refresh"
+		<-s.stateChange
+		s.getCachedState(w, r)
+	} else {
+		w.WriteHeader(500)
+	}
 }
 
 // Sets the server's cached state and notifies the CHIP
@@ -115,9 +122,14 @@ func main() {
 	router.HandleFunc("/getCachedState", server.getCachedState)
 	router.HandleFunc("/setState", server.setState)
 
+	// Static files
+	staticDir := "static"
+	fs := http.FileServer(http.Dir(staticDir))
+	router.Handle("/", fs)
+
 	listenAddress := ":43001"
 	log.Print("Listening on " + listenAddress)
 
 	http.Handle("/", http.TimeoutHandler(router, time.Duration(1*time.Hour), "replaceme"))
-	http.ListenAndServe(":43001", nil)
+	http.ListenAndServe(listenAddress, nil)
 }
