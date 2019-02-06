@@ -123,8 +123,8 @@ func main() {
 	router.HandleFunc("/setState", server.setState)
 
 	// Static files
-	staticDir := "static"
-	fs := http.FileServer(http.Dir(staticDir))
+	fs := http.FileServer(http.Dir("static"))
+	router.PathPrefix("/static/").Handler(http.StripPrefix("/static/", fs))
 	router.Handle("/", fs)
 
 	listenAddress := ":43001"

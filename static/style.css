@@ -1,0 +1,111 @@
+html, body {
+    background: black;
+}
+
+#status {
+    color: white;
+    font-family: monospace;
+    font-size: 18px;
+    margin-top: 25px;
+    margin-bottom: 25px;
+    margin-left: 20px;
+}
+
+#container {
+    width: 400px;
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+}
+
+.rounded-box {
+    border-radius: 6px;
+    text-align: center;
+    font-size: 32px;
+    font-family: monospace;
+
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+@keyframes box_pulse {
+    0% {
+        background-color: red;
+        color: black;
+    }
+    100% {
+        background-color: black;
+        color: red;
+    }
+}
+
+.temp-box {
+    width: 100px;
+    height: 100px;
+}
+
+.pulse_animation {
+    animation-name: box_pulse;
+    animation-duration: 0.5s;
+    animation-delay: 0s;
+    animation-direction: alternate-reverse;
+    animation-iteration-count: infinite;
+}
+
+.temp_label {
+    color: #71a6fc;
+    margin-bottom: 5px;
+}
+
+#current_temp {
+    background-color: #71a6fcff;
+    margin-bottom: 10px;
+}
+
+#target_temp {
+    background-color: red;
+}
+
+#controls * {
+    text-decoration: none;
+}
+
+#enable_button {
+    width: 200px;
+    height: 130px;
+    border: 3px solid red;
+    color: red;
+}
+
+#enable_button:active {
+    background-color: red;
+    color: black;
+}
+
+#enable_button.enabled {
+    background-color: #440000;
+}
+
+#adjustments_container {
+    display: flex;
+    flex-direction: row;
+}
+
+#adjustments_container :first-child {
+    margin-right: 5px;
+}
+
+.adjustment_button {
+    height: 70px;
+    color: #71a6fc; 
+    border: 3px solid #71a6fc;
+    flex-grow: 1;
+}
+
+.adjustment_button:active {
+    background: #71a6fc;
+    color: black;
+}
+
