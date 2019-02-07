@@ -63,16 +63,19 @@ function updateUI() {
     elem(CURRENT_TEMP).innerHTML = current_temperature;
 }
 
-function setEnabled(enabled) {
-    is_enabled = enabled;
-
+function sendNewState()
+{
     let request = new XMLHttpRequest();
     request.open("POST", "/setState");
 
-    let body = (enabled ? "enabled" : "disabled") + " " + target_temperature.toString();
+    let body = (is_enabled ? "enabled" : "disabled") + " " + target_temperature.toString();
     console.log("Sending: " + body);
     request.send(body);
+}
 
+function setEnabled(enabled) {
+    is_enabled = enabled;
+    sendNewState();
     updateUI();
 }
 
@@ -88,6 +91,7 @@ function setHeatOn(on) {
 
 function setTargetTemperature(target) {
     target_temperature = target;
+    sendNewState();
     updateUI();
 }
 
