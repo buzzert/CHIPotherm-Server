@@ -22,6 +22,16 @@ type commandControlServer struct {
 // Will return either "refresh", in which the server expects a call to updateState, or
 // the string representation of the new state (i.e., "enabled 80")
 func (s *commandControlServer) poll(w http.ResponseWriter, r *http.Request) {
+    // XXX: Release previous poll requests, if applicable 
+    // TODO: way to tie connections to channels? So every time the connection drops or times out,
+    // the channel is also signaled?
+    select {
+    case s.commands <- "":
+        log.Print("Dropping previous poll connection")
+    default:
+        break
+    }
+
 	log.Print("CHIP Connected.")
 	s.connected = true
 	context := r.Context()
