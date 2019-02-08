@@ -12,11 +12,18 @@ html, body {
 }
 
 #container {
+    margin: auto;
     width: 400px;
     font-family: sans-serif;
     display: flex;
     flex-direction: row;
     justify-content: space-around;
+}
+
+@media screen and (max-device-width: 400px) {
+    #container {
+        width: 100% !important;
+    }
 }
 
 .rounded-box {
