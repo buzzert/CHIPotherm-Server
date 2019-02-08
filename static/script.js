@@ -10,19 +10,39 @@ var target_temperature = 0.0;
 var current_temperature = 0.0;
 var heat_on = false;
 
+function parseResponse(state) {
+    is_enabled = (state["Enabled"] == "true");
+    heat_on = (state["HeatOn"] == "true");
+    target_temperature = Math.round(parseFloat(state["TargetTemperature"]))
+    current_temperature = Math.round(parseFloat(state["CurrentTemperature"]))
+
+    updateUI();
+}
+
+function getCachedState() {
+    let request = new XMLHttpRequest();
+    request.open("GET", "/getCachedState");
+    request.onload = () => {
+        if (request.status == 200) {
+            parseResponse(JSON.parse(request.responseText));
+            setStatus("Connected.");
+        } else {
+            console.log("Error getting cached state");
+            setStatus("Refreshing...");
+        }
+    }
+
+    request.send();
+}
+
 function refreshState() {
     let request = new XMLHttpRequest();
     request.open("GET", "/refreshState");
     request.onload = () => {
         if (request.status == 200) {
             let state = JSON.parse(request.responseText);
-            is_enabled = (state["Enabled"] == "true");
-            heat_on = (state["HeatOn"] == "true");
-            target_temperature = Math.round(parseFloat(state["TargetTemperature"]))
-            current_temperature = Math.round(parseFloat(state["CurrentTemperature"]))
-
+            parseResponse(state);
             setStatus("Connected.");
-            updateUI();
         } else {
             console.log("Error getting response");
             setStatus("Error connecting to server");
@@ -110,6 +130,6 @@ window.onload = () => {
         setTargetTemperature(target_temperature + 1.0);
     }
 
-    refreshState();
+    getCachedState();
     setInterval(refreshState, 2500);
 }
